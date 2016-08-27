@@ -19,9 +19,10 @@ class Link(dotbot.Plugin):
 
     def _process_links(self, links):
         success = True
-        opts = self._context.defaults().get('link', self._default_opts)
+        defaults = self._context.defaults().get('link', self._default_opts)
         for destination, source in links.items():
             destination = os.path.expandvars(destination)
+            opts = dict(defaults)
             if isinstance(source, dict):
                 # extended config
                 opts.update({k: source[k] for k in source.keys() if k in self._opts})
@@ -46,7 +47,7 @@ class Link(dotbot.Plugin):
             child_opts['create'] = False
             if create:
                 success &= self._create(os.path.join(destination, 'dummy'))
-            for child in os.listdir(path):
+            for child in os.listdir(os.path.join(self._context.base_directory(), path)):
                 child_paths = [os.path.join(p, child) for p in (destination, path)]
                 success &= self._process_one_link(*child_paths, child_opts)
             return success

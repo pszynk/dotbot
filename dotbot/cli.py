@@ -1,5 +1,6 @@
 import os, glob
 
+from sys import exit
 from argparse import ArgumentParser
 from .config import ConfigReader, ReadingError
 from .dispatcher import Dispatcher, DispatchError
@@ -31,12 +32,12 @@ def read_config(config_file):
     reader = ConfigReader(config_file)
     return reader.get_config()
 
-def main():
+def main(args=None):
     log = Messenger()
     try:
         parser = ArgumentParser()
         add_options(parser)
-        options = parser.parse_args()
+        options = parser.parse_args(args)
         if options.super_quiet:
             log.set_level(Level.WARNING)
         if options.quiet:

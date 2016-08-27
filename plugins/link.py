@@ -44,8 +44,10 @@ class Link(dotbot.Plugin):
             child_opts = copy.deepcopy(opts)
             child_opts['link_children'] = False
             child_opts['create'] = False
-            child_paths = [os.path.join(p, child) for p in (destination, path)]
+            if create:
+                success &= self._create(os.path.join(destination, 'dummy'))
             for child in os.listdir(path):
+                child_paths = [os.path.join(p, child) for p in (destination, path)]
                 success &= self._process_one_link(*child_paths, child_opts)
             return success
         if create:

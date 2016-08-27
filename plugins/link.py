@@ -6,6 +6,8 @@ class Link(dotbot.Plugin):
     '''
 
     _directive = 'link'
+    _opts = ['relative', 'force', 'relink', 'create', 'link_children']
+    _default_opts = {k: False for k in _opts }
 
     def can_handle(self, directive):
         return directive == self._directive
@@ -17,32 +19,40 @@ class Link(dotbot.Plugin):
 
     def _process_links(self, links):
         success = True
-        defaults = self._context.defaults().get('link', {})
+        opts = self._context.defaults().get('link', self._default_opts)
         for destination, source in links.items():
             destination = os.path.expandvars(destination)
-            relative = defaults.get('relative', False)
-            force = defaults.get('force', False)
-            relink = defaults.get('relink', False)
-            create = defaults.get('create', False)
             if isinstance(source, dict):
                 # extended config
-                relative = source.get('relative', relative)
-                force = source.get('force', force)
-                relink = source.get('relink', relink)
-                create = source.get('create', create)
+                opts.update({k: source[k] for k in source.keys() if k in self._opts})
                 path = source['path']
             else:
                 path = source
             path = os.path.expandvars(os.path.expanduser(path))
-            if create:
-                success &= self._create(destination)
-            if force or relink:
-                success &= self._delete(path, destination, relative, force)
-            success &= self._link(path, destination, relative)
+            success &= self._process_one_link(destination, path, opts)
         if success:
             self._log.info('All links have been set up')
         else:
             self._log.error('Some links were not successfully set up')
+        return success
+
+    def _process_one_link(self, destination, path, opts):
+        success = True
+        create, force, relink, relative, link_children = \
+            [opts[k] for k in ['create', 'force', 'relink', 'relative', 'link_children']]
+        if link_children:
+            child_opts = copy.deepcopy(opts)
+            child_opts['link_children'] = False
+            child_opts['create'] = False
+            child_paths = [os.path.join(p, child) for p in (destination, path)]
+            for child in os.listdir(path):
+                success &= self._process_one_link(*child_paths, child_opts)
+            return success
+        if create:
+            success &= self._create(destination)
+        if force or relink:
+            success &= self._delete(path, destination, relative, force)
+        success &= self._link(path, destination, relative)
         return success
 
     def _is_link(self, path):

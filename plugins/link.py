@@ -1,4 +1,4 @@
-import os, shutil, dotbot, copy
+import os, shutil, dotbot
 
 class Link(dotbot.Plugin):
     '''
@@ -25,7 +25,7 @@ class Link(dotbot.Plugin):
             opts = dict(defaults)
             if isinstance(source, dict):
                 # extended config
-                opts.update({k: source[k] for k in source.keys() if k in self._opts})
+                opts.update(source)
                 path = source['path']
             else:
                 path = source
@@ -42,7 +42,7 @@ class Link(dotbot.Plugin):
         create, force, relink, relative, link_children = \
             [opts[k] for k in ['create', 'force', 'relink', 'relative', 'link_children']]
         if link_children:
-            child_opts = copy.deepcopy(opts)
+            child_opts = dict(opts)
             child_opts['link_children'] = False
             child_opts['create'] = False
             if create:

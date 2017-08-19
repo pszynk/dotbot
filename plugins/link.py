@@ -1,4 +1,7 @@
-import os, shutil, dotbot
+import os
+import shutil
+import dotbot
+
 
 class Link(dotbot.Plugin):
     '''
@@ -6,8 +9,6 @@ class Link(dotbot.Plugin):
     '''
 
     _directive = 'link'
-    _opts = ['relative', 'force', 'relink', 'create', 'link_children']
-    _default_opts = {k: False for k in _opts }
 
     def can_handle(self, directive):
         return directive == self._directive
@@ -19,44 +20,48 @@ class Link(dotbot.Plugin):
 
     def _process_links(self, links):
         success = True
-        defaults = self._context.defaults().get('link', self._default_opts)
+        defaults = self._context.defaults().get('link', {})
         for destination, source in links.items():
             destination = os.path.expandvars(destination)
-            opts = dict(defaults)
+            relative = defaults.get('relative', False)
+            force = defaults.get('force', False)
+            relink = defaults.get('relink', False)
+            create = defaults.get('create', False)
             if isinstance(source, dict):
                 # extended config
-                opts.update(source)
-                path = source['path']
+                relative = source.get('relative', relative)
+                force = source.get('force', force)
+                relink = source.get('relink', relink)
+                create = source.get('create', create)
+                path = self._default_source(destination, source.get('path'))
             else:
-                path = source
+                path = self._default_source(destination, source)
             path = os.path.expandvars(os.path.expanduser(path))
-            success &= self._process_one_link(destination, path, opts)
+            if not self._exists(os.path.join(self._context.base_directory(), path)):
+                success = False
+                self._log.warning('Nonexistent target %s -> %s' %
+                    (destination, path))
+                continue
+            if create:
+                success &= self._create(destination)
+            if force or relink:
+                success &= self._delete(path, destination, relative, force)
+            success &= self._link(path, destination, relative)
         if success:
             self._log.info('All links have been set up')
         else:
             self._log.error('Some links were not successfully set up')
         return success
 
-    def _process_one_link(self, destination, path, opts):
-        success = True
-        create, force, relink, relative, link_children = \
-            [opts[k] for k in ['create', 'force', 'relink', 'relative', 'link_children']]
-        if link_children:
-            child_opts = dict(opts)
-            child_opts['link_children'] = False
-            child_opts['create'] = False
-            if create:
-                success &= self._create(os.path.join(destination, 'dummy'))
-            for child in os.listdir(os.path.join(self._context.base_directory(), path)):
-                child_paths = [os.path.join(p, child) for p in (destination, path)]
-                success &= self._process_one_link(*child_paths, child_opts)
-            return success
-        if create:
-            success &= self._create(destination)
-        if force or relink:
-            success &= self._delete(path, destination, relative, force)
-        success &= self._link(path, destination, relative)
-        return success
+    def _default_source(self, destination, source):
+        if source is None:
+            basename = os.path.basename(destination)
+            if basename.startswith('.'):
+                return basename[1:]
+            else:
+                return basename
+        else:
+            return source
 
     def _is_link(self, path):
         '''

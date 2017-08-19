@@ -70,8 +70,9 @@ editing the variables in the `install` script appropriately.
 Setting up Dotbot as a submodule or subrepo locks it on the current version.
 You can upgrade Dotbot at any point. If using a submodule, run `git submodule
 update --remote dotbot`, substituting `dotbot` with the path to the Dotbot
-submodule. If using a subrepo, run `git fetch && git checkout origin/master` in
-the Dotbot directory.
+submodule; be sure to commit your changes before running `./install`, otherwise
+the old version of Dotbot will be checked out by the install script. If using a
+subrepo, run `git fetch && git checkout origin/master` in the Dotbot directory.
 
 ### Full Example
 
@@ -151,6 +152,9 @@ do not have a defined ordering.
 When writing nested constructs, keep in mind that YAML is whitespace-sensitive.
 Following the formatting used in the examples is a good idea.
 
+Also, note that `~` in YAML is the same as `null` in JSON. If you want a single
+character string containing a tilde, make sure to enclose it in quotes: `'~'`
+
 ### Link
 
 Link commands specify how files and directories should be symbolically linked.
@@ -189,6 +193,49 @@ symbolic link should have a relative path.
       path: zshrc
 ```
 
+If the source location is omitted or set to `null`, Dotbot will use the
+basename of the destination, with a leading `.` stripped if present. This makes
+the following three config files equivalent:
+
+```yaml
+- link:
+    ~/bin/ack: ack
+    ~/.vim: vim
+    ~/.vimrc:
+      relink: true
+      path: vimrc
+    ~/.zshrc:
+      force: true
+      path: zshrc
+```
+
+```yaml
+- link:
+    ~/bin/ack:
+    ~/.vim:
+    ~/.vimrc:
+      relink: true
+    ~/.zshrc:
+      force: true
+```
+
+```json
+[
+  {
+    "link": {
+      "~/bin/ack": null,
+      "~/.vim": null,
+      "~/.vimrc": {
+        "relink": true
+      },
+      "~/.zshrc": {
+        "force": true
+      }
+    }
+  }
+]
+```
+
 ### Shell
 
 Shell commands specify shell commands to be run. Shell commands are run in the
@@ -218,6 +265,7 @@ command itself.
     command: read var && echo Your variable is $var
     stdin: true
     stdout: true
+    description: Reading and printing variable
   -
     command: read fail
     stderr: true
@@ -227,16 +275,26 @@ command itself.
 
 Clean commands specify directories that should be checked for dead symbolic
 links. These dead links are removed automatically. Only dead links that point
-to the dotfiles directory are removed.
+to the dotfiles directory are removed unless the `force` option is set to
+`true`.
 
 #### Format
 
 Clean commands are specified as an array of directories to be cleaned.
 
+Clean commands support an extended configuration syntax. In this type of
+configuration, commands are specified as directory paths mapping to options. If
+the `force` option is set to `true`, dead links are removed even if they don't
+point to a file inside the dotfiles directory.
+
 #### Example
 
 ```yaml
 - clean: ['~']
+
+- clean:
+    ~/.config:
+      force: true
 ```
 
 ### Defaults
@@ -293,12 +351,12 @@ Do you have a feature request, bug report, or patch? Great! See
 License
 -------
 
-Copyright (c) 2014-2016 Anish Athalye. Released under the MIT License. See
+Copyright (c) 2014-2017 Anish Athalye. Released under the MIT License. See
 [LICENSE.md][license] for details.
 
 [init-dotfiles]: https://github.com/Vaelatern/init-dotfiles
 [dotfiles-template]: https://github.com/anishathalye/dotfiles_template
-[inspiration]: https://github.com/anishathalye/dotbot/wiki/List-of-Dotbot-Users
+[inspiration]: https://github.com/anishathalye/dotbot/wiki/Users
 [managing-dotfiles-post]: http://www.anishathalye.com/2014/08/03/managing-your-dotfiles/
 [wiki]: https://github.com/anishathalye/dotbot/wiki
 [contributing]: CONTRIBUTING.md

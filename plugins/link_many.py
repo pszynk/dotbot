@@ -1,6 +1,7 @@
 import os
 import shutil
 import dotbot
+import pdb
 
 
 class LinkMany(dotbot.Plugin):
@@ -20,8 +21,9 @@ class LinkMany(dotbot.Plugin):
         return self._process_links(data)
 
     def _process_links(self, links):
+        pdb.set_trace()
         success = True
-        defaults = self._context.defaults().get(self._directive, self._default_opts())
+        defaults = {**self._default_opts(), **self._context.defaults().get(self._directive, {})}
 
         for destination, source in links.items():
             destination = self._expand_path(destination)
@@ -35,11 +37,11 @@ class LinkMany(dotbot.Plugin):
 
             warn_msgs = []
             if not self._exists(source_path):
-                warn_msgs.append('Nonexistent source %s -> %s'.format(destination, source_path))
+                warn_msgs.append('Nonexistent source {} -> {}'.format(destination, source_path))
             elif not os.path.isdir(source_path):
-                warn_msgs.append('Source must be a directory %s -> %s'.format(destination, source_path))
+                warn_msgs.append('Source must be a directory {} -> {}'.format(destination, source_path))
             elif not os.listdir(source_path):
-                warn_msgs.append('Source directory is empty %s -> %s'.format(destination, source_path))
+                warn_msgs.append('Source directory is empty {} -> {}'.format(destination, source_path))
             if warn_msgs:
                 for m in warn_msgs:
                     self._log.warning(m)
@@ -58,7 +60,7 @@ class LinkMany(dotbot.Plugin):
 
             # for each file in source directory
             for f in os.listdir(source_path):
-                dst, src = [os.join(x, f) for x in (destination, source_path)]
+                dst, src = [os.path.join(x, f) for x in (destination, source_path)]
                 if force or relink:
                     success &= self._delete(src, dst, relative, force)
                 success &= self._link(src, dst, relative)
@@ -72,11 +74,12 @@ class LinkMany(dotbot.Plugin):
     def _default_opts(self):
         opts = {k: False for k in self._opts }
         opts['path'] = None
+        return opts
 
     def _default_source(self, destination, source):
         path = source
         if not path:
-            path = destination
+            path = os.path.basename(destination)
             if path.startswith('.'):
                 path = path[1:]
         return self._expand_path(os.path.join(self._context.base_directory(), path))

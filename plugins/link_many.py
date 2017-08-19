@@ -1,7 +1,6 @@
 import os
 import shutil
 import dotbot
-import pdb
 
 
 class LinkMany(dotbot.Plugin):
@@ -21,7 +20,6 @@ class LinkMany(dotbot.Plugin):
         return self._process_links(data)
 
     def _process_links(self, links):
-        pdb.set_trace()
         success = True
         defaults = {**self._default_opts(), **self._context.defaults().get(self._directive, {})}
 
